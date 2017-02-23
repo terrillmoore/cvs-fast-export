@@ -507,7 +507,7 @@ export_commit(git_commit *commit, const char *branch,
 	    if (opts->reposurgeon)
 	    {
 		if (report)
-		    printf("property cvs-revision %zd %s", strlen(revpairs), revpairs);
+		    printf("property cvs-revisions %zd %s", strlen(revpairs), revpairs);
 	    }
 	}
     }
