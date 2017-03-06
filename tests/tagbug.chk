@@ -48,7 +48,7 @@ _$*
 core
 # CVS default ignores end
 
-property cvs-revision 20 bar.c 1.1
+property cvs-revisions 20 bar.c 1.1
 foo.c 1.1
 
 commit refs/heads/master

@@ -42,7 +42,7 @@ _$*
 core
 # CVS default ignores end
 
-property cvs-revision 9 exec 1.1
+property cvs-revisions 9 exec 1.1
 
 blob
 mark :3
@@ -57,7 +57,7 @@ Committing nonexecutable file.
 
 from :2
 M 100644 :3 nonexec
-property cvs-revision 12 nonexec 1.1
+property cvs-revisions 12 nonexec 1.1
 
 reset refs/heads/master
 from :4

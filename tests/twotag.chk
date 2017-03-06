@@ -48,7 +48,7 @@ _$*
 core
 # CVS default ignores end
 
-property cvs-revision 30 tweedledee 1.1
+property cvs-revisions 30 tweedledee 1.1
 tweedledum 1.1
 
 blob
@@ -70,7 +70,7 @@ An example second checkin
 from :3
 M 100644 :4 tweedledee
 M 100644 :5 tweedledum
-property cvs-revision 30 tweedledee 1.2
+property cvs-revisions 30 tweedledee 1.2
 tweedledum 1.2
 
 commit refs/heads/FUBAR
@@ -80,7 +80,7 @@ data 30
 Synthetic commit for tag FUBAR
 from :6
 M 100644 :2 tweedledum
-property cvs-revision 15 tweedledum 1.1
+property cvs-revisions 15 tweedledum 1.1
 
 reset refs/heads/master
 from :6

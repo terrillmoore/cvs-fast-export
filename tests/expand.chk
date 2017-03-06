@@ -42,7 +42,7 @@ _$*
 core
 # CVS default ignores end
 
-property cvs-revision 11 README 1.1
+property cvs-revisions 11 README 1.1
 
 blob
 mark :3
@@ -57,7 +57,7 @@ This is another sample commit
 
 from :2
 M 100644 :3 README
-property cvs-revision 11 README 1.2
+property cvs-revisions 11 README 1.2
 
 blob
 mark :5
@@ -72,7 +72,7 @@ Yet another sample commit
 
 from :4
 M 100644 :5 README
-property cvs-revision 11 README 1.3
+property cvs-revisions 11 README 1.3
 
 reset refs/heads/master
 from :6
