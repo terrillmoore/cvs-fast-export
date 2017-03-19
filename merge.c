@@ -243,40 +243,11 @@ cvs_commit_match(const cvs_commit *a, const cvs_commit *b)
 
 /*
  * These statics are part of an optimization to reduce allocation calls
- * by only doing one when more memory needs to be grabbed than the 
+ * by only doing one when more memory needs to be grabbed than the
  * previous commit build used.
  */
 static const cvs_commit **files = NULL;
 static int	        sfiles = 0;
-/* not all platforms have qsort_r so use something global for compare func */
-static int              srevisions = 0;
-static revision_t       *revisions = NULL;
-static size_t           *sort_buf = NULL;
-static size_t           *sort_temp = NULL;
-
-static void
-alloc_revisions(size_t nrev)
-/* Allocate buffers for merge_branches */
-{
-    if (srevisions < nrev) {
-	/* As first branch is master, don't expect this to be hit more than once */
-	revisions = xrealloc(revisions, nrev * sizeof(revision_t), __func__);
-	sort_buf = xrealloc(sort_buf, nrev * sizeof(size_t), __func__);
-	sort_temp = xrealloc(sort_temp, nrev * sizeof(size_t), __func__);
-	srevisions = nrev;
-    }
-}
-
-static void
-merge_branches_cleanup(void)
-{
-    if (srevisions > 0) {
-	free(revisions);
-	free(sort_buf);
-	free(sort_temp);
-	srevisions = 0;
-    }
-}
 
 static void
 git_commit_cleanup(void)
@@ -290,8 +261,7 @@ git_commit_cleanup(void)
 }
 
 static git_commit *
-git_commit_build(revision_t *revisions, const cvs_commit *leader,
-		 const int nrevisions, const int nactive)
+git_commit_build(revision_t *revisions, const cvs_commit *leader, const int nrevisions)
 /* build a changeset commit from a clique of CVS revisions */
 {
     size_t     n;
@@ -434,129 +404,26 @@ cvs_commit_first_date(cvs_commit *commit)
     return commit->date;
 }
 
-static int
-compare_clique(const void *a, const void *b)
-/*
- * Comparator that will sort null commits first, tailed commits
- * last and by time order, latest first in the middle
- * used for finding a clique of cvs commits to make a git commit
- */
-{
-    size_t i1 = *(size_t *)a, i2 = *(size_t *)b;
-    const cvs_commit
-	*c1 = REVISIONS(i1),
-	*c2 = REVISIONS(i2);
-
-    /* Null commits come first */
-    if (!c1 && !c2)
-	return 0;
-    if (!c1)
-	return -1;
-    if (!c2)
-	return 1;
-
-    /* tailed commits come last*/
-    if (c1->tailed && c2->tailed)
-	return 0;
-    if (c1->tailed)
-	return 1;
-    if (c2->tailed)
-	return -1;
-
-    /* most recent first date order in between */
-    return time_compare(c2->date, c1->date);
-
-    /* Could make it a total order by comparing a and b */
-}
-
-static void
-resort_revs (size_t skip, size_t nrev, size_t resort) {
-    /*
-     * Resort the revisions array. First skip items are already sorted
-     * and guaranteed to be nothing sorting less then them.
-     * Next resort items are not sorted, remainder of the array is
-     * Depending on how much we have altered, either sort the array or
-     * sort the changed bits and merge the two sorted parts
-     * There's probably an optimal cutoff point, which I haven't
-     * calculated
-     * sort func is hard coded to compare_clique.
-     */
-    if (resort > (nrev - skip) / 2)
-	/* Sort the whole array again (except the previous nulls) */
-	qsort(sort_buf + skip, nrev - skip, sizeof(size_t), compare_clique);
-    else {
-	size_t p, q, i;
-	if (resort > 1)
-	    /* sort the head of the array */
-	    qsort(sort_buf + skip, resort, sizeof(size_t),  compare_clique);
-	/* merge the two sorted pieces of array into sort_temp */
-	p = skip;
-	q = skip + resort;
-	i = 0;
-	while (p < skip + resort || q < nrev) {
-	    if (p == skip + resort)
-		/* Data is already in the right place
-		 * no need to copy to sort_temp and back
-		 */
-		break;
-	    else if (q == nrev) {
-		memcpy(sort_temp + i, sort_buf + p, sizeof(size_t) * (skip + resort - p));
-		i += skip + resort - p;
-		break;
-	    }
-	    else if (compare_clique(&sort_buf[p], &sort_buf[q]) < 0)
-		sort_temp[i++] = sort_buf[p++];
-	    else
-		sort_temp[i++] = sort_buf[q++];
-	}
-	/* Copy the resorted piece back into sort_buf */
-	memcpy(sort_buf + skip, sort_temp, sizeof(size_t) * i);
-    }
-}
-
 static void
 merge_branches(rev_ref **branches, int nbranch,
 		  rev_ref *branch, git_repo *gl)
 /* merge a set of per-CVS-master branches into a gitspace DAG branch */
 {
-    int nlive, n, nrev = nbranch;
-    git_commit *prev = NULL, *head = NULL, **tail = &head, *commit;
+    int nlive;
+    int n;
+    git_commit *prev = NULL;
+    git_commit *head = NULL, **tail = &head;
+    revision_t *revisions = xmalloc(nbranch * sizeof(revision_t), "merging per-file branches");
+    git_commit *commit;
     cvs_commit *latest;
+    revision_t *p;
     time_t birth = 0;
-#ifdef ORDERDEBUG
-    static unsigned long oc = 0;
-#endif /* ORDERDEBUG */
 
-    alloc_revisions(nrev);
     /*
      * It is expected that the array of input branches is all CVS branches
      * tagged with some single branch name. The job of this code is to
      * build the changeset sequence for the corresponding named git branch,
      * then graft it to its parent git branch.
-     *
-     * We want to keep the revisions array in the same order as branches
-     * was passed to us (modulo removing items) if not the fast output
-     * phase suffers badly.
-     *
-     * However, for the purpose of computing cliques it is very useful to
-     * have the array sorted by date (with special handling for null and
-     * tailed commits)
-     *
-     * So, we will maintain a sort_buf which has indexes into the revisons
-     * array but is sorted to help us find cliques. On any given iteration
-     * sort_buf indexes point to the following types of commit
-     *
-     * 0...skip..........................nrev
-     * |null|non tailed newest first|tailed|
-     *
-     * As each clique will be found near "skip" we may only have to look
-     * at a small number of commits to find the clique. This leaves the
-     * end of the array sorted. After the clique items are moved onto
-     * the next commits in their master, we can sort the changed items
-     * and then merge the two sorted pieces of the array
-     *
-     * resort tracks the number of items past skip we have touched.
-     * nbranch is always nrev - skip, might be worth eliding it.
      */
     nlive = 0;
     for (n = 0; n < nbranch; n++) {
@@ -566,7 +433,6 @@ merge_branches(rev_ref **branches, int nbranch,
 	 */
 	cvs_commit *c = branches[n]->commit;
 	REVISION_T_PACK_INIT(revisions[n], c);
-	sort_buf[n] = n;
 	/*
 	 * Compute number of CVS branches that are still live - that is,
 	 * have remaining older CVS file commits for this branch. Non-live
@@ -620,9 +486,6 @@ merge_branches(rev_ref **branches, int nbranch,
 	REVISION_T_PACK(revisions[n], (cvs_commit *)NULL);
     }
 
-    /* Initial sort into null/date/tailed order */
-    qsort(sort_buf, nrev, sizeof(size_t), compare_clique);
-    size_t skip = 0;
     /*
      * Walk down CVS branches creating gitspace commits until each CVS
      * branch has merged with its parent.
@@ -633,74 +496,46 @@ merge_branches(rev_ref **branches, int nbranch,
 	 * figure out which (non-tailed) one of them is latest in
 	 * time.  It will be the leader for the git commit build.
 	 */
-	for (n = skip, latest = NULL; n < nrev; n++) {
-	    cvs_commit *rev = REVISIONS(sort_buf[n]);
-	    if (!rev) {
-		skip++;
-		nbranch--;
+	for (n = 0, p = revisions, latest = NULL; n < nbranch; n++) {
+	    /*
+	     * Squeeze null commit pointers out of the current set.
+	     */
+	    cvs_commit *rev = REVISIONS(n);
+	    if (!rev)
 		continue;
-	    }
-	    /* array is sorted so we get the latest live item after the nulls */
-	    latest = rev;
-	    break;
+	    *p++ = revisions[n];
+	    if (rev->tailed)
+		continue;
+	    if (!latest || time_compare(latest->date, rev->date) < 0)
+		latest = rev;
 	}
 	assert(latest != NULL);
+	nbranch = p - revisions;
 
 	/*
-	 * Construct current commit from the set of CVS commits 
+	 * Construct current commit from the set of CVS commits
 	 * accumulated the last time around the loop.
 	 * This is the point at which revisions needs to be sorted
 	 * by master for rev dir packing to perform reasonably.
 	 */
-	commit = git_commit_build(revisions, latest, nrev, nbranch);
+	commit = git_commit_build(revisions, latest, nbranch);
 
 	/*
 	 * Step down each CVS branch in parallel.  Our goal is to land on
-	 * a clique of matching CVS commits that will  be made into a 
+	 * a clique of matching CVS commits that will  be made into a
 	 * matching gitspace commit on the next time around the loop.
 	 */
 	nlive = 0;
-	/* worst case, we have to resort everything */
-	size_t resort = nbranch;
-	bool can_match = true;
-	for (n = skip; n < nrev; n++) {
-	    cvs_commit *c = REVISIONS(sort_buf[n]);
+	for (n = 0; n < nbranch; n++) {
+	    cvs_commit *c = REVISIONS(n);
 	    cvs_commit *to;
-
-	    /*
-	     * Already got to parent branch?
-             * We've sorted the list so everything else is tailed
-	     */
+	    /* already got to parent branch? */
 	    if (c->tailed)
-		break;
-
-	    if (c != latest && can_match && !(cvs_commit_time_close(latest->date, c->date) || cvs_commitid_match(latest, c))) {
-		/*
-		 * Because we are in date order, once we hit something too
-                 * far off, we can't get anything else in the clique -
-                 * unless there are cases where things with the same commitid
-                 * have wildly differing dates.
-		 *
-		 * But: the point of the cvs_commitid_match() call
-		 * above is to let us keep accumulating when we see a
-		 * matching commit id even if the commit is outside
-		 * the time window.
-                 */
-		can_match = false;
-		/* how much of the array might now be unsorted */
-		resort = n - skip;
-	    }
+		continue;
 	    /* not affected? */
-	    if (c != latest && (!can_match || !cvs_commit_match(c, latest))) {
+	    if (c != latest && !cvs_commit_match(c, latest)) {
 		if (c->parent || !c->dead)
 		    nlive++;
-		/*
-		 * If we've found the clique, and at least one branch
-		 * is still live then bail.
-                 * Note, we are guaranteed to set resort before we get here
-                 */
-		if (!can_match && nlive > 0)
-		    break;
 		continue;
 	    }
 #ifdef GITSPACEDEBUG
@@ -761,26 +596,12 @@ merge_branches(rev_ref **branches, int nbranch,
 	     * tests for tailed commits. Leave it in the set for the next
 	     * changeset construction.
 	     */
-	    REVISION_T_PACK(revisions[sort_buf[n]], to);
+	    REVISION_T_PACK(revisions[n], to);
 	    continue;
 	Kill:
-	    REVISION_T_PACK(revisions[sort_buf[n]], (cvs_commit *)NULL);
+	    REVISION_T_PACK(revisions[n], (cvs_commit *)NULL);
 	}
-	/* we've changed some revs to their parents. Resort */
-	resort_revs(skip, nrev, resort);
 
-#ifdef ORDERDEBUG
-	/*
-	 * Sanity check that we've ordered things properly
-	 * oc is useful for a conditional breakpoint if not
-	 */
-	size_t i;
-	for (i = skip + 1; i < nrev; i++) {
-	    if (compare_clique(&sort_buf[i-1], &sort_buf[i]) > 0)
-		warn("Sort broken oc: %lu\n", oc);
-	}
-	oc++;
-#endif /* ORDERDEBUG */
 	*tail = commit;
 	tail = &commit->parent;
 	prev = commit;
@@ -793,7 +614,7 @@ merge_branches(rev_ref **branches, int nbranch,
      * to be collected in the previous phase).  This is not the brahch's
      * root commit, but the child of that root.
      */
-    nbranch = cvs_commit_date_sort(revisions, nrev);
+    nbranch = cvs_commit_date_sort(revisions, nbranch);
     if (nbranch && branch->parent )
     {
 	int	present;
@@ -871,8 +692,8 @@ merge_branches(rev_ref **branches, int nbranch,
 	    if (prev)
 		prev->tail = true;
 	} else {
-	    *tail = git_commit_build(revisions, REVISIONS(0), nrev, nbranch);
-	    for (n = 0; n < nrev; n++)
+	    *tail = git_commit_build(revisions, REVISIONS(0), nbranch);
+	    for (n = 0; n < nbranch; n++)
 		if (REVISIONS(n)) {
 #ifdef GITSPACEDEBUG
 		    if (REVISIONS(n)->gitspace) {
@@ -893,6 +714,7 @@ merge_branches(rev_ref **branches, int nbranch,
 	    REVISIONS(n)->tailed = false;
 
     /* PUNNING: see the big comment in cvs.h */ 
+    free(revisions);
     branch->commit = (cvs_commit *)head;
 }
 
@@ -1047,7 +869,7 @@ rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
     size_t i;
     for (i = 0; i < tag->count; i++)
 	REVISION_T_PACK_INIT(revs[i], revisions[i]);
-    git_commit *g = git_commit_build(revs, c, tag->count, tag->count);
+    git_commit *g = git_commit_build(revs, c, tag->count);
     free(revs);
     g->parent = c->gitspace;
     rev_ref *parent_branch = git_branch_of_commit(gl, c);
@@ -1216,7 +1038,6 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 	    merge_branches(refs, nref, h, gl);
 	progress_step();
     }
-    merge_branches_cleanup();
     progress_end(NULL);
     
 
