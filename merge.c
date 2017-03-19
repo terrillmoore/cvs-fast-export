@@ -12,7 +12,7 @@
  */
 
 /*
- * Pack the dead flag into the commit pointer so we can avoid dereferencing 
+ * Pack the dead flag into the commit pointer so we can avoid dereferencing
  * in the inner loop. Also keep the dir near the packed pointer
  * as it is used in the inner loop.
  */
@@ -22,7 +22,7 @@ typedef struct _revision {
     const master_dir *dir;
 } revision_t;
 
-/* 
+/*
  * Once set, dir doesn't change, so have an initial pack that sets dir
  * and a later pack that doesn't
  */
@@ -35,8 +35,8 @@ typedef struct _revision {
 #define COMMIT_MASK (~(uintptr_t)0 ^ 1)
 #define REVISION_T_COMMIT(rev) (cvs_commit *)(((rev).packed) & (COMMIT_MASK))
 
-/* 
- * Be aware using these macros that they bind to whatever revisions array 
+/*
+ * Be aware using these macros that they bind to whatever revisions array
  * is in scope
  */
 #define DEAD(index) (REVISION_T_DEAD(revisions[(index)]))
@@ -113,7 +113,7 @@ rev_ref_tsort(rev_ref *git_branches, cvs_master *masters, size_t nmasters)
 	    return NULL;
 	}
         /*
-         * Remove the found branch from the input list and 
+         * Remove the found branch from the input list and
          * append it to the output list
          */
 	*prev = r->next;
@@ -267,8 +267,8 @@ git_commit_build(revision_t *revisions, const cvs_commit *leader, const int nrev
     size_t     n;
     git_commit *commit;
 
-    commit = xmalloc( sizeof(git_commit), "creating commit");
-    
+    commit = xmalloc(sizeof(git_commit), "creating commit");
+
     commit->parent = NULL;
     commit->date = leader->date;
     commit->commitid = leader->commitid;
@@ -284,7 +284,7 @@ git_commit_build(revision_t *revisions, const cvs_commit *leader, const int nrev
 	    revdir_pack_add(REVISIONS(n), DIR(n));
 	}
     }
-    revdir_pack_end(&commit->revdir);   
+    revdir_pack_end(&commit->revdir);
 
 #ifdef ORDERDEBUG
     debugmsg("commit_build: %p\n", commit);
@@ -311,7 +311,7 @@ git_commit_locate_date(const rev_ref *branch, const cvstime_t date)
 {
     git_commit	*commit;
 
-    /* PUNNING: see the big comment in cvs.h */ 
+    /* PUNNING: see the big comment in cvs.h */
     for (commit = (git_commit *)branch->commit; commit; commit = commit->parent)
     {
 	if (time_compare(commit->date, date) <= 0)
@@ -329,12 +329,12 @@ git_commit_locate_one(const rev_ref *branch, const cvs_commit *part)
     if (!branch)
 	return NULL;
 
-    /* PUNNING: see the big comment in cvs.h */ 
+    /* PUNNING: see the big comment in cvs.h */
     for (commit = (git_commit *)branch->commit;
 	 commit;
 	 commit = commit->parent)
     {
-	/* PUNNING: see the big comment in cvs.h */ 
+	/* PUNNING: see the big comment in cvs.h */
 	if (cvs_commit_match((cvs_commit *)commit, part))
 	    return commit;
     }
@@ -637,7 +637,7 @@ merge_branches(rev_ref **branches, int nbranch,
 	    }
 	}
 	if (present == nbranch)
-	    /* 
+	    /*
 	     * Branch join looks normal, we can just go ahead and build
 	     * the last commit.
 	     */
@@ -713,8 +713,8 @@ merge_branches(rev_ref **branches, int nbranch,
 	if (REVISIONS(n))
 	    REVISIONS(n)->tailed = false;
 
-    /* PUNNING: see the big comment in cvs.h */ 
     free(revisions);
+    /* PUNNING: see the big comment in cvs.h */
     branch->commit = (cvs_commit *)head;
 }
 
@@ -776,7 +776,7 @@ compare_cvs_commit(const void *a, const void *b)
 static void
 rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
 {
-    /* 
+    /*
      * The cvs_commit->gitspace pointer gives the first git commit a
      * cvs commit appears in. (first in DAG pre-order) If we find the
      * newest revision C in the tag and then follow the backlink to G,
@@ -796,7 +796,7 @@ rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
      * If this doesn't work we create branch from G with a single
      * commit with the correct revisions.
      *
-     * It is possible for multiple git commits to contain the same 
+     * It is possible for multiple git commits to contain the same
      * set of cvs revisions.
      *
      * Tags can point to dead commits, we ignore these as they
@@ -807,8 +807,8 @@ rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
 	return;
     if (c->gitspace == NULL) {
 	char buf[CVS_MAX_REV_LEN + 1];
-	warn("%s %s: %s points at commit with no gitspace link.\n", 
-	     c->master->name, 
+	warn("%s %s: %s points at commit with no gitspace link.\n",
+	     c->master->name,
 	     cvs_number_string(c->number, buf, sizeof(buf)),
 	     tag->name);
 	return;
@@ -837,7 +837,7 @@ rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
 	 */
 	rev_ref    *h;
 	git_commit *g;
-	
+
 	for (h = gl->heads; h; h = h->next) {
 	    if (h->tail)
 		continue;
@@ -967,7 +967,7 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
     progress_end(NULL);
     /*
      * Sort by degree so that finding branch points always works.
-     * In later operations we always want to walk parent branches 
+     * In later operations we always want to walk parent branches
      * before children, with trunk first.
      */
     progress_begin("Sorting...", nmasters);
@@ -1031,7 +1031,7 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 	    }
 	}
 	if (nref)
-	    /* 
+	    /*
 	     * Merge those branches into a single gitspace branch
 	     * and add that to the output revlist on gl.
 	     */
@@ -1039,7 +1039,7 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 	progress_step();
     }
     progress_end(NULL);
-    
+
 
 #ifdef GITSPACEDEBUG
     /* Check every non-dead cvs commit has a backlink
@@ -1068,7 +1068,7 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 #endif /* GITSPACEDEBUG */
 
     /*
-     * Find tag locations.  The goal is to associate each tag object 
+     * Find tag locations.  The goal is to associate each tag object
      * (which normally corresponds to a clique of named tags, one per master)
      * with the right gitspace commit.
      */
