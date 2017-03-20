@@ -1,5 +1,8 @@
 		cvs-fast-export project news
 
+1.43: 2017-03-20
+   Revert <2014-11-19T18:11:22Z@flower.powernet.co.uk>, optimization was wrong.
+
 1.42: 2017-03-06
     Fix a typo in a property name that affects interoperability with reposurgeon.
 
