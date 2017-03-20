@@ -3,7 +3,7 @@ access;
 symbols
 	CSRG-last:1.2.2.1;
 locks; strict;
-comment	@Was src/src/lib/libcurses/tty.c,v in NetBSD src@;
+comment	@# Missing tag for a branch.@;
 
 
 1.4
