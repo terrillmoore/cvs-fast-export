@@ -432,7 +432,8 @@ typedef struct _cvs_author {
 #define _alignof(T)  sizeof(long double)
 #endif
 
-#if defined(__APPLE__)
+/* For versions of Mac OS X before Sierra */
+#if defined(__APPLE__) && !defined(CLOCK_REALTIME)
 /* we mock this in utils.c; the CLOCK_REALTIME value is not used */
 typedef int clockid_t;
 int clock_gettime(clockid_t clock_id, struct timespec *tp);
