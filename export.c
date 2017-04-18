@@ -871,7 +871,9 @@ void export_commits(forest_t *forest,
 
     progress_end("done");
 
-    fputs("done\n", stdout);
+	if (!opts->reposurgeon) {
+		fputs("done\n", stdout);
+	}
 
     cleanup(opts);
 
