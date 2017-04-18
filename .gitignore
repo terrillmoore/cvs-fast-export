@@ -3,5 +3,6 @@ gram.[ch]
 lex.[ch]
 cvs-fast-export
 test
+*.1
 *.html
 docbook-xsl.css
