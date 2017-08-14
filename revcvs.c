@@ -465,7 +465,7 @@ cvs_master_set_refs(cvs_master *cm, cvs_file *cvsfile)
 	 */
 	if (cvs_is_head(s->number)) {
 	    for (h = cm->heads; h; h = h->next) {
-		if (cvs_same_branch(h->commit->number, s->number))
+		if (h->commit && cvs_same_branch(h->commit->number, s->number))
 		    break;
 	    }
 	    if (h) {
@@ -530,7 +530,8 @@ cvs_master_set_refs(cvs_master *cm, cvs_file *cvsfile)
 	     */
 	    h->number = atom_cvs_number(cvs_zero);
 	    warn("discarding dead untagged branch %s in %s\n",
-		 cvs_number_string(h->commit->number, buf, sizeof(buf)),
+		 h->commit ? cvs_number_string(h->commit->number, buf, sizeof(buf))
+			   : "<NULL commit>",
 		 cvsfile->export_name);
 	    continue;
 	}
