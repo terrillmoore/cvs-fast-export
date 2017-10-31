@@ -286,14 +286,14 @@ cvs_master_patch_vendor_branch(cvs_master *cm, cvs_file *cvs)
 	    fprintf(stderr, "Vendor branch ending in %s\n", vrev);
 #endif /* CVSDEBUG */
 
+	    /* stash pointer to newest vendor branch, might need it later */ 
+	    nvendor = vendor;
+
 	    if (!vendor->ref_name) {
 		char	rev[CVS_MAX_REV_LEN];
 		char	name[PATH_MAX];
 		cvs_number	branch;
 		cvs_commit	*vlast;
-
-		/* stash pointer to newest vendor branch, might need it later */ 
-		nvendor = vendor;
 
 		for (vlast = vendor->commit; vlast; vlast = vlast->parent)
 		    if (!vlast->parent)
@@ -303,15 +303,18 @@ cvs_master_patch_vendor_branch(cvs_master *cm, cvs_file *cvs)
 		cvs_number_string(&branch, rev, sizeof(rev));
 		snprintf(name, sizeof(name), "import-%s", rev);
 		vendor->ref_name = atom(name);
-		vendor->parent = trunk;
-		/*
-		 * Degree used to be set from vlast->number->c;
-		 * this should be equivalent, since the branches
-		 * have not yet been grafted.
-		 */
-		vendor->degree = vendor->commit->number->c;
-		vendor->number = vendor->commit->number;
 	    }
+
+	    vendor->parent = trunk;
+
+	    /*
+	     * Degree used to be set from vlast->number->c;
+	     * this should be equivalent, since the branches
+	     * have not yet been grafted.
+	     */
+	    vendor->degree = vendor->commit->number->c;
+	    vendor->number = vendor->commit->number;
+
 	}
     }
 
