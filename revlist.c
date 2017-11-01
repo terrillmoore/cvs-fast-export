@@ -9,7 +9,7 @@
 /*
  * A revision list is the history for an entire RCS/CVS repository.
  * These are utility functions used by both the analysis phase and
- * the DAG merge code.
+ * the DAG collation code.
  */
 
 rev_ref *

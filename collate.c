@@ -8,7 +8,7 @@
 /*
  * These functions analyze a CVS revlist into a changeset DAG.
  *
- * merge_to_changesets() is the main function.
+ * collate_to_changesets() is the main function.
  */
 
 /*
@@ -74,7 +74,7 @@ parents_in_revlist(const char *child_name, rev_ref *rev_list,
  * trivally true.
  *
  * Parent branch names are determined by examining every cvs master.  See the
- * general note on branch matching under merge_changesets().
+ * general note on branch matching under collate_changesets().
  */
 {
     cvs_master *cm;
@@ -251,7 +251,7 @@ static int	        sfiles = 0;
 
 static void
 git_commit_cleanup(void)
-/* clean up after rev list merge */
+/* clean up after rev list collate */
 {
     if (files) {
 	free(files);
@@ -405,15 +405,15 @@ cvs_commit_first_date(cvs_commit *commit)
 }
 
 static void
-merge_branches(rev_ref **branches, int nbranch,
+collate_branches(rev_ref **branches, int nbranch,
 		  rev_ref *branch, git_repo *gl)
-/* merge a set of per-CVS-master branches into a gitspace DAG branch */
+/* collate a set of per-CVS-master branches into a gitspace DAG branch */
 {
     int nlive;
     int n;
     git_commit *prev = NULL;
     git_commit *head = NULL, **tail = &head;
-    revision_t *revisions = xmalloc(nbranch * sizeof(revision_t), "merging per-file branches");
+    revision_t *revisions = xmalloc(nbranch * sizeof(revision_t), "collating per-file branches");
     git_commit *commit;
     cvs_commit *latest;
     revision_t *p;
@@ -423,7 +423,8 @@ merge_branches(rev_ref **branches, int nbranch,
      * It is expected that the array of input branches is all CVS branches
      * tagged with some single branch name. The job of this code is to
      * build the changeset sequence for the corresponding named git branch,
-     * then graft it to its parent git branch.
+     * then graft it to its parent git branch.  Note that the main loop walks
+     * backwards from each branch tip.
      */
     nlive = 0;
     for (n = 0; n < nbranch; n++) {
@@ -488,7 +489,7 @@ merge_branches(rev_ref **branches, int nbranch,
 
     /*
      * Walk down CVS branches creating gitspace commits until each CVS
-     * branch has merged with its parent.
+     * branch has collated with its parent.
      */
     while (nlive > 0 && nbranch > 0) {
 	/*
@@ -885,9 +886,9 @@ rev_tag_search(tag_t *tag, cvs_commit **revisions, git_repo *gl)
 	continue;
     r->next = tag_branch;
     g->author = atom("cvs-fast-export");
-    size_t len = strlen(tag->name) + 30;
+    size_t len = strlen(tag->name) + 41;
     char *log = xmalloc(len, __func__);
-    snprintf(log, len, "Synthetic commit for tag %s", tag->name);
+    snprintf(log, len, "Synthetic commit for incomplete tag %s", tag->name);
     g->log = atom(log);
     free(log);
 }
@@ -924,16 +925,16 @@ rev_ref_set_parent(git_repo *gl, rev_ref *dest, cvs_master *source, size_t nmast
 }
 
 git_repo *
-merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
-/* entry point - merge CVS revision lists to a gitspace DAG */
+collate_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
+/* entry point - collate CVS revision lists to a gitspace DAG */
 {
     size_t	head_count = 0;
     int		n; /* used only in progress messages */
-    git_repo	*gl = xcalloc(1, sizeof(git_repo), "list merge");
+    git_repo	*gl = xcalloc(1, sizeof(git_repo), "list collate");
     cvs_master	*cm;
     rev_ref	*lh, *h;
     tag_t	*t;
-    rev_ref	**refs = xcalloc(nmasters, sizeof(rev_ref *), "list merge");
+    rev_ref	**refs = xcalloc(nmasters, sizeof(rev_ref *), "list collate");
 
     /*
      * It is expected that the branch trees in all CVS masters have
@@ -1000,7 +1001,7 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
     progress_end(NULL);
 
 #ifdef ORDERDEBUG
-    fputs("merge_to_changesets: before common branch merge:\n", stderr);
+    fputs("collate_to_changesets: before common branch collate:\n", stderr);
     for (cm = masters; cm < masters + nmasters; cm++) {
 	for (lh = cm->heads; lh; lh = lh->next) {
 	    cvs_commit *commit = lh->commit;
@@ -1013,10 +1014,10 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 #endif /* ORDERDEBUG */
 
     /*
-     * Merge common branches
+     * Collate common branches
      */
 
-    progress_begin("Merge common branches...", head_count);
+    progress_begin("Collate common branches...", head_count);
     revdir_pack_alloc(nmasters);
     for (h = gl->heads; h; h = h->next) {
 	/*
@@ -1032,10 +1033,10 @@ merge_to_changesets(cvs_master *masters, size_t nmasters, int verbose)
 	}
 	if (nref)
 	    /*
-	     * Merge those branches into a single gitspace branch
+	     * Collate those branches into a single gitspace branch
 	     * and add that to the output revlist on gl.
 	     */
-	    merge_branches(refs, nref, h, gl);
+	    collate_branches(refs, nref, h, gl);
 	progress_step();
     }
     progress_end(NULL);

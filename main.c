@@ -379,11 +379,11 @@ main(int argc, char **argv)
     gather_stats("after parsing");
 
     /* commit set coalescence happens here */
-    forest.git = merge_to_changesets(forest.cvs, 
+    forest.git = collate_to_changesets(forest.cvs, 
 				     forest.filecount,
 				     import_options.verbose);
 
-    gather_stats("after branch merge");
+    gather_stats("after branch collation");
 
     /* report on the DAG */
     if (forest.git) {

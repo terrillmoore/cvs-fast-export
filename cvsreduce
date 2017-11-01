@@ -25,7 +25,7 @@ The only identifying information left in the tree is filenames and CVS
 user IDs.
 
 The intent is to discard bulky content but preserve all metadata
-relevant to changeset merging. A collection of stripped files should
+relevant to changeset collation. A collection of stripped files should
 imply the same changeset DAG as the unstripped originals, but be
 easier to pass around, faster to process, and not reveal potentially
 sensitive data.

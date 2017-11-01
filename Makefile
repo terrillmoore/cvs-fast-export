@@ -85,7 +85,7 @@ LFLAGS=
 
 OBJS=gram.o lex.o rbtree.o main.o import.o dump.o cvsnumber.o \
 	cvsutil.o revdir.o revlist.o atom.o revcvs.o generate.o export.o \
-	nodehash.o tags.o authormap.o graph.o utils.o merge.o hash.o
+	nodehash.o tags.o authormap.o graph.o utils.o collate.o hash.o
 
 all: cvs-fast-export man html
 
@@ -96,7 +96,7 @@ $(OBJS): cvs.h cvstypes.h
 revcvs.o cvsutils.o rbtree.o: rbtree.h
 atom.o nodehash.o revcvs.o revdir.o: hash.h
 revdir.o: treepack.c dirpack.c revdir.c
-dump.o export.o graph.o main.o merge.o revdir.o: revdir.h
+dump.o export.o graph.o main.o collate.o revdir.o: revdir.h
 
 BISON ?= bison
 

@@ -601,7 +601,7 @@ static int sort_by_date(const void *ap, const void *bp)
 }
 
 static struct commit_seq *canonicalize(git_repo *rl)
-/* copy/sort merged commits into git-fast-export order */
+/* copy/sort collated commits into git-fast-export order */
 {
     /*
      * Dump in canonical (strict git-fast-export) order.
