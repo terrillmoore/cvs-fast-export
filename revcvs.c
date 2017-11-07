@@ -277,34 +277,40 @@ cvs_master_patch_vendor_branch(cvs_master *cm, cvs_file *cvs)
 
     trunk = cm->heads;
     assert(strcmp(trunk->ref_name, "master") == 0);
+    /* walk all the list of branch heads */
     for (vendor = cm->heads; vendor; vendor = vendor->next) {
 	if (vendor->commit && cvs_is_vendor(vendor->commit->number))
 	{
+	    /* found a vendor branch by its numbering scheme (1.1.{odd}.n) */
 #ifdef CVSDEBUG
 	    char	vrev[CVS_MAX_REV_LEN];
 	    cvs_number_string(vendor->commit->number, vrev, sizeof(vrev));
 	    fprintf(stderr, "Vendor branch ending in %s\n", vrev);
 #endif /* CVSDEBUG */
 
-	    /* stash pointer to newest vendor branch, might need it later */ 
+	    /* stash pointer to newest vendor branch, will need it later */
 	    nvendor = vendor;
 
 	    if (!vendor->ref_name) {
+		/* Vendor branch without a name: invent one */
 		char	rev[CVS_MAX_REV_LEN];
 		char	name[PATH_MAX];
 		cvs_number	branch;
 		cvs_commit	*vlast;
 
+		/* walk down vendor branch to its initial commit, 1.1.{odd}.1 */
 		for (vlast = vendor->commit; vlast; vlast = vlast->parent)
 		    if (!vlast->parent)
 			break;
 		memcpy(&branch, vlast->number, sizeof(cvs_number));
+		/* reduce 1.1.{odd}.1 to 1.1.{odd}, and synthesize a name from that */
 		branch.c--;
 		cvs_number_string(&branch, rev, sizeof(rev));
 		snprintf(name, sizeof(name), "import-%s", rev);
+		/* attach new name to the vendor branch tip */
 		vendor->ref_name = atom(name);
 	    }
-
+	    /* link vendor branch tip to head */
 	    vendor->parent = trunk;
 
 	    /*
