@@ -446,6 +446,9 @@ if __name__ == '__main__':
     if not os.path.exists(repo):
         sys.stderr.write("cvsconvert: repo %s does not exist.\n" % repo)
         sys.exit(1)
+    if os.path.realpath(os.path.abspath(".")) == os.path.realpath(os.path.abspath(repo)):
+        sys.stderr.write("cvsconvert: repo directory cannot be the current directory.\n")
+        sys.exit(1)
     cc = ConvertComparison(stem=repo, repo=repo, module=module,
                            checkout=repo+".checkout",
                            options=engine_opts,
