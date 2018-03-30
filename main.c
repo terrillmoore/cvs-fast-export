@@ -24,10 +24,6 @@ FILE *LOGFILE;
 int threads = NO_MAX;
 #endif /* THREADS */
 
-static import_options_t import_options = {
-    .striplen = -1,
-};
-
 static int get_int_substr(const char * str, const regmatch_t * p)
 {
     char buff[256];
@@ -183,6 +179,10 @@ main(int argc, char **argv)
 	.id_token_expand =  EXPANDUNSPEC,
     };
     export_stats_t	export_stats;
+
+    import_options_t import_options = {
+	.striplen = -1,
+    };
 
 #if defined(__GLIBC__)
     /* 
