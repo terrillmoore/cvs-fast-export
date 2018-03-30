@@ -323,7 +323,9 @@ main(int argc, char **argv)
 	    break;
 	case 's':
 	    assert(optarg);
-	    import_options.striplen = strlen(optarg) + 1;
+	    import_options.striplen = strlen(optarg);
+	    if (import_options.striplen != 0)
+		import_options.striplen++;
 	    break;
 	case 'p':
 	    progress = true;
