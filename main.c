@@ -24,10 +24,6 @@ FILE *LOGFILE;
 int threads = NO_MAX;
 #endif /* THREADS */
 
-static import_options_t import_options = {
-    .striplen = -1,
-};
-
 static int get_int_substr(const char * str, const regmatch_t * p)
 {
     char buff[256];
@@ -184,6 +180,10 @@ main(int argc, char **argv)
     };
     export_stats_t	export_stats;
 
+    import_options_t import_options = {
+	.striplen = -1,
+    };
+
 #if defined(__GLIBC__)
     /* 
      * The default sbrk call grabs memory from the OS in 128kb chunks
@@ -323,7 +323,9 @@ main(int argc, char **argv)
 	    break;
 	case 's':
 	    assert(optarg);
-	    import_options.striplen = strlen(optarg) + 1;
+	    import_options.striplen = strlen(optarg);
+	    if (import_options.striplen != 0)
+		import_options.striplen++;
 	    break;
 	case 'p':
 	    progress = true;
