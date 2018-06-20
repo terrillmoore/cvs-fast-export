@@ -426,7 +426,7 @@ if __name__ == '__main__':
         sys.stderr.write("cvsconvert: requires a repo/module argument.\n")
         sys.exit(1)
     elif "/" in arguments[0]:
-        (repo, module) = arguments[0].split('/')
+        (repo, module) = arguments[0].split('/', 1)
     elif not os.path.isdir(arguments[0] + os.sep + "CVSROOT"):
         (repo, module) = (arguments[0], None)
     else:
