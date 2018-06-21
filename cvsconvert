@@ -82,8 +82,7 @@ class RCSRepository:
     def __init__(self, name):
         self.name = name
         self.retain = False
-        # For convenience, emulate the module structure of a CVS repository
-        self.directory = os.path.join(os.getcwd(), self.name, "module")
+        self.directory = os.path.join(os.getcwd(), self.name)
         self.conversions = []
     def run_with_cleanup(self, cmd):
         if not noisy_run(cmd):
@@ -122,15 +121,16 @@ class RCSRepository:
         "Check in changes to the specified file."
         self.do("ci", "-m'%s' %s" % (message, filename))
     def stream(self, module, gitdir, outfile, more_opts=''):
-        vopt = "-v " * (verbose - DEBUG_LIFTER + 1)
+        directory = os.path.join(self.directory, module)
+        vopt      = "-v " * (verbose - DEBUG_LIFTER + 1)
         # The -L is necessary to handle proxied directories. 
-        self.run_with_cleanup('find -L {0} -name "*,v" | cvs-fast-export {1} {2} >{3}'.format(self.directory, vopt, more_opts, outfile))
+        self.run_with_cleanup('find -L {0} -name "*,v" | cvs-fast-export {1} {2} >{3}'.format(directory, vopt, more_opts, outfile))
     def convert(self, module, gitdir, more_opts=''):
         "Convert the repo."
-        streamfile = "%s.git.fi" % module
+        streamfile = "%s-%s.git.fi" % (self.name, module)
         self.stream(module, gitdir, streamfile, more_opts)
         self.run_with_cleanup("rm -fr {0} && mkdir {0} && git init --quiet {0}".format(gitdir))
-        self.run_with_cleanup('cat {2} | (cd {1} >/dev/null; git fast-import --quiet --done && git checkout)'.format(self.directory, gitdir, streamfile))
+        self.run_with_cleanup('cat {1} | (cd {0} >/dev/null; git fast-import --quiet --done && git checkout)'.format(gitdir, streamfile))
         self.conversions.append(gitdir)
         if not self.retain:
             os.remove(streamfile)
@@ -182,10 +182,11 @@ class CVSRepository(RCSRepository):
 
 class CVSCheckout:
     PROXYSUFFIX = "-proxy"
+    SUFFIX      = ".checkout"
     def __init__(self, repo, module, checkout=None):
-        self.repo = repo
-        self.module = module or "module"
-        self.checkout = checkout or module
+        self.repo   = repo
+        self.module = module   or "module"
+        self.name   = checkout or "%s-%s%s" % (repo.name, module, CVSCheckout.SUFFIX)
         # Hack to get around repositories that don't have a CVSROOT & module
         self.proxy = None
         if not os.path.exists(self.repo.directory + os.sep + "CVSROOT"):
@@ -199,12 +200,11 @@ class CVSCheckout:
             os.mkdir(self.proxy + os.sep + "CVSROOT")
             self.repo.name += CVSCheckout.PROXYSUFFIX
             self.repo.directory += CVSCheckout.PROXYSUFFIX
+        if os.path.exists(self.name):
+          shutil.rmtree(self.name)
         self.repo.do("co", self.module)
-        if checkout:
-            if os.path.exists(checkout):
-                shutil.rmtree(checkout)
-            os.rename(self.module, checkout)
-        self.directory = os.path.join(os.getcwd(), self.checkout)
+        os.rename(self.module, self.name)
+        self.directory = os.path.join(os.getcwd(), self.name)
     def do(self, cmd, *args):
         "Execute a command in the checkout directory."
         with directory_context(self.directory):
@@ -301,16 +301,14 @@ class ConvertComparison:
     "Compare a CVS repository and its conversion for equality."
     # Needs to stay synchronized with reposurgeon's generic conversion makefile
     SUFFIX = "-git"
-    def __init__(self, stem, repo=None, checkout=None, module=None, options="", showdiffs=False):
-        self.stem = stem
-        self.repo = CVSRepository(repo if repo else stem + ".testrepo",
-                                  readonly=True)
-        self.checkout = self.repo.checkout(module,
-                                           checkout if checkout else stem + ".checkout")
-        self.module = module or stem
-        self.showdiffs = showdiffs
-        self.repo.convert("module", stem + ConvertComparison.SUFFIX, more_opts=options)
-        with directory_context(stem + ConvertComparison.SUFFIX):
+    def __init__(self, repo=None, module=None, checkout=None, options="", showdiffs=False):
+        self.repo        = CVSRepository(repo, readonly=True)
+        self.checkout    = self.repo.checkout(module, checkout)
+        self.gitRepoName = "%s-%s%s" % (self.repo.name, self.checkout.module, ConvertComparison.SUFFIX)
+        self.showdiffs   = showdiffs
+        self.repo.convert(self.checkout.module, self.gitRepoName, more_opts=options)
+
+        with directory_context(self.gitRepoName):
             self.branches = [name for name in capture_or_die("git branch -l").split() if name != '*' and not junkbranch(name)]
             self.tags = [name for name in capture_or_die("git tag -l").split()]
         self.branches.sort()
@@ -319,7 +317,7 @@ class ConvertComparison:
             self.branches = ["master"] + self.branches
     def compare_tree(self, legend, ref, success_expected=True):
         "Test to see if a tag or branch checkout has the expected content."
-        preamble = "%s %s %s: " % (self.stem, legend, ref)
+        preamble = "%s %s %s: " % (self.repo.name, legend, ref)
         if ref not in self.tags and ref not in self.branches:
             if success_expected:
                 sys.stderr.write(preamble + "%s unexpectedly missing.\n" % ref)
@@ -331,19 +329,19 @@ class ConvertComparison:
                     if ignore not in path.split(os.sep) and not path.endswith(".cvsignore") and not path.endswith(".gitignore"):
                         yield path
         self.checkout.update(ref)
-        with directory_context(self.stem + ConvertComparison.SUFFIX):
+        with directory_context(self.gitRepoName):
             if not noisy_run("git checkout --quiet %s" % ref):
                 self.repo.cleanup()
                 sys.exit(1)
         if 0:
-            with directory_context(self.stem + ConvertComparison.SUFFIX):
+            with directory_context(self.gitRepoName):
                 if not noisy_run("git log --format=%H -1"):
                     self.repo.cleanup()
                     sys.exit(1)
-        cvspaths = list(ftw(self.stem + ".checkout", ignore="CVS"))
-        cvsfiles = [fn[len(self.stem+".checkout")+1:] for fn in cvspaths]
-        gitpaths = list(ftw(self.stem + ConvertComparison.SUFFIX, ignore=".git"))
-        gitfiles = [fn[len(self.stem+ConvertComparison.SUFFIX)+1:] for fn in gitpaths]
+        cvspaths = list(ftw(self.checkout.name, ignore="CVS"))
+        cvsfiles = [fn[len(self.checkout.name)+1:] for fn in cvspaths]
+        gitpaths = list(ftw(self.gitRepoName, ignore=".git"))
+        gitfiles = [fn[len(self.gitRepoName)+1:] for fn in gitpaths]
         cvsfiles.sort()
         gitfiles.sort()
         success = True
@@ -362,13 +360,13 @@ class ConvertComparison:
                         sys.stderr.write(preamble + "CVS only: %s\n" %
                                          cvs_only)
             success = False
-        common = [(path, path.replace(".checkout/", ConvertComparison.SUFFIX + "/"))
-                  for path in cvspaths if path.replace(".checkout/", ConvertComparison.SUFFIX + "/") in gitpaths]
+        common = [(path, path.replace(CVSCheckout.SUFFIX + "/", ConvertComparison.SUFFIX + "/"))
+                  for path in cvspaths if path.replace(CVSCheckout.SUFFIX + "/", ConvertComparison.SUFFIX + "/") in gitpaths]
         for (a, b) in common:
             if not filecmp.cmp(a, b, shallow=False):
                 success = False
                 if success_expected:
-                    sys.stderr.write("%s %s %s: %s and %s are different.\n" % (self.stem, legend, ref, a, b))
+                    sys.stderr.write("%s %s %s: %s and %s are different.\n" % (self.repo.name, legend, ref, a, b))
                     if self.showdiffs:
                         os.system("diff -u %s %s" % (a, b))
         if success:
@@ -397,7 +395,7 @@ class ConvertComparison:
             sys.stderr.write(cmd + " return was not as expected\n")
     def cleanup(self):
         self.checkout.cleanup()
-        shutil.rmtree(self.stem+ConvertComparison.SUFFIX)
+        shutil.rmtree(self.gitRepoName)
 
 # End.
 
@@ -449,17 +447,17 @@ if __name__ == '__main__':
     if os.path.realpath(os.path.abspath(".")) == os.path.realpath(os.path.abspath(repo)):
         sys.stderr.write("cvsconvert: repo directory cannot be the current directory.\n")
         sys.exit(1)
-    cc = ConvertComparison(stem=repo, repo=repo, module=module,
-                           checkout=repo+".checkout",
+    cc = ConvertComparison(repo=repo, module=module,
+                           checkout=None,
                            options=engine_opts,
-                           showdiffs= True)
+                           showdiffs=True)
     if verbose == 0 and "-p" in engine_opts:
         verbose = DEBUG_STEPS
     cc.repo.retain = retain
     cc.checkall()
     cc.checkout.cleanup()
     if retain:
-        sys.stderr.write("cvsconvert: conversion is in %s%s\n" % (repo, ConvertComparison.SUFFIX))
+        sys.stderr.write("cvsconvert: conversion is in %s\n" % (cc.gitRepoName))
     else:
         cc.cleanup()
 
