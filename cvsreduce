@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Runs under both Python 2 and Python 3: preserve this property!
 """
 cvsreduce - skeletonize CVS master files
@@ -37,19 +37,63 @@ strip_logs = True
 strip_content = True
 verbose = 0
 
-binary_encoding = 'latin-1'	# Preserves 0x80..0xff
+# Any encoding that preserves 0x80...0x8f through round-tripping from byte
+# streams to Unicode and back would do, latin-1 is the best known of these.
 
-def make_std_wrapper(stream):
-    "Standard input/output wrapper factory function for binary I/O"
-    if isinstance(stream, io.TextIOWrapper):
+import io
+
+binary_encoding = 'latin-1'
+
+if str is bytes:  # Python 2
+    
+    polystr = str
+    polybytes = bytes
+    polyord = ord
+    polychr = str
+
+else:  # Python 3
+    
+    def polystr(o):
+        if isinstance(o, str):
+            return o
+        if isinstance(o, bytes):
+            return str(o, encoding=binary_encoding)
+        raise ValueError
+
+    def polybytes(o):
+        if isinstance(o, bytes):
+            return o
+        if isinstance(o, str):
+            return bytes(o, encoding=binary_encoding)
+        raise ValueError
+
+    def polyord(c):
+        "Polymorphic ord() function"
+        if isinstance(c, str):
+            return ord(c)
+        else:
+            return c
+
+    def polychr(c):
+        "Polymorphic chr() function"
+        if isinstance(c, int):
+            return chr(c)
+        else:
+            return c
+
+    def make_std_wrapper(stream):
+        "Standard input/output wrapper factory function"
+        # This ensures that the encoding of standard output and standard
+        # error on Python 3 matches the binary encoding we use to turn
+        # bytes to Unicode in polystr above
+        
         # newline="\n" ensures that Python 3 won't mangle line breaks
         # line_buffering=True ensures that interactive command sessions work as expected
         return io.TextIOWrapper(stream.buffer, encoding=binary_encoding, newline="\n", line_buffering=True)
-    return stream
 
-sys.stdin = make_std_wrapper(sys.stdin)
-sys.stdout = make_std_wrapper(sys.stdout)
-sys.stderr = make_std_wrapper(sys.stderr)
+    sys.stdin = make_std_wrapper(sys.stdin)
+    sys.stdout = make_std_wrapper(sys.stdout)
+    sys.stderr = make_std_wrapper(sys.stderr)
 
 def replace_escaped_text(inputf, replacement, outputf):
     "Replace text between @ delimiters with a specified string."
@@ -111,7 +155,7 @@ def skeletonize(inputf, outputf):
         if verbose > 1:
             sys.stderr.write("%s: %s\n" % (state, line.strip()))
         if state == 'ini':
-            if line.startswith("symbols"):
+            if line.startswith(b"symbols"):
                 state = "sym"
             elif line[0].isdigit():
                 last_version = line.strip()
@@ -120,7 +164,7 @@ def skeletonize(inputf, outputf):
                     outputf.write(line)
                     hash_escaped_text(inputf, outputf)
                     continue
-            elif line.startswith("text"):
+            elif line.startswith(b"text"):
                 if strip_content:
                     outputf.write(line)
                     txt = "%s content for %s\n" % (inputf.name, last_version)
@@ -133,7 +177,7 @@ def skeletonize(inputf, outputf):
             if not line[0] in (' ', '\t'):
                 state = "ini"
             elif strip_tags and '0' not in line.split(":")[1]:
-                if line.endswith(";\n"):
+                if line.endswith(b";\n"):
                     outputf.write("\t;\n")
                 continue
         outputf.write(line)
