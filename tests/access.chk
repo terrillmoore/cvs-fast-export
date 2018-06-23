@@ -48,14 +48,14 @@ use cexe_t.c as a template for cexe.c to bootstrap icr and ict
 
 M 100644 :1 access
 M 100644 inline .gitignore
-data 198
+data 199
 # CVS default ignores begin
 tags
 TAGS
 .make.state
 .nse_depinfo
 *~
-#*
+\#*
 .#*
 ,*
 _$*

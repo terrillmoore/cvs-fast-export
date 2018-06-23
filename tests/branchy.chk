@@ -12,14 +12,14 @@ This is a sample commit
 
 M 100644 :1 README
 M 100644 inline .gitignore
-data 198
+data 199
 # CVS default ignores begin
 tags
 TAGS
 .make.state
 .nse_depinfo
 *~
-#*
+\#*
 .#*
 ,*
 _$*
@@ -94,14 +94,14 @@ from :8
 
 blob
 mark :9
-data 204
+data 205
 # CVS default ignores begin
 tags
 TAGS
 .make.state
 .nse_depinfo
 *~
-#*
+\#*
 .#*
 ,*
 _$*
@@ -137,14 +137,14 @@ property cvs-revisions 15 .cvsignore 1.1
 
 blob
 mark :11
-data 208
+data 209
 # CVS default ignores begin
 tags
 TAGS
 .make.state
 .nse_depinfo
 *~
-#*
+\#*
 .#*
 ,*
 _$*

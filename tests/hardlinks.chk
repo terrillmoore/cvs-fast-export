@@ -26,14 +26,14 @@ New file, from deprecated acinclude.m4.
 
 M 100644 :1 hardlinks
 M 100644 inline .gitignore
-data 198
+data 199
 # CVS default ignores begin
 tags
 TAGS
 .make.state
 .nse_depinfo
 *~
-#*
+\#*
 .#*
 ,*
 _$*
