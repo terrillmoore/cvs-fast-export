@@ -5,7 +5,15 @@ into a clean revision history is difficult and has rebarbative edge
 cases. If you are reading this, you have probably tripped over one
 of them.  Here is what to do about it.
 
-== Reduction ==
+== Build and port errors ==
+
+These are relatively simple to fix.  Specify your build envipronment:
+OS, compiler version, platform.  Include a transcript of the compiler
+errors.
+
+== Translation errors ==
+
+=== Reduction ===
 
 First, reduce the test case to a minimal set of CVS files that will
 reproduce the misbehavior. The cvsconvert wrapper script should be
@@ -43,13 +51,23 @@ interesting and should be reported.
 At the end of this process you should have a handful of skeletonized
 master files.  
 
-== Transmission ==
+=== Transmission ===
 
 Make a tarball including the CVS masters. Make a session transcript
 showing the error relicating on them.  Mail these things to the
 maintainer with any other information you think might be relevant.
+Better yet, open an issue at the project home on Gitlab and attach
+this archive.
 
-== Compensation ==
+=== Warning ===
+
+If you don't pass me the ability to reproduce your error, and the fix
+isn't instantly obvious, your issue may very well never be fixed at
+all.  I didn't write the core of cvs-fast-export, and debugging that
+core from the outside without the ability to reproduce errors is not
+merely brutally hard but verging on impossible.
+
+=== Compensation ===
 
 Wrestling with CVS repository malformations is ugly, hard work.
 
