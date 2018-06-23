@@ -109,17 +109,17 @@ gram.o: gram.c lex.h gram.h
 import.o: import.c lex.h gram.h
 lex.o: lex.c gram.h
 
-.SUFFIXES: .html .asc .txt .1
+.SUFFIXES: .html .adoc .txt .1
 
 # Requires asciidoc and xsltproc/docbook stylesheets.
-.asc.1:
+.adoc.1:
 	a2x --doctype manpage --format manpage $<
-.asc.html:
+.adoc.html:
 	a2x --doctype manpage --format xhtml -D . $<
 	rm -f docbook-xsl.css
 
-reporting-bugs.html: reporting-bugs.asc
-	asciidoc reporting-bugs.asc
+reporting-bugs.html: reporting-bugs.adoc
+	asciidoc reporting-bugs.adoc
 
 man: cvs-fast-export.1 cvssync.1 cvsconvert.1
 
@@ -181,7 +181,7 @@ distclean: clean
 	cd tests; $(MAKE) --quiet clean
 
 SOURCES = Makefile *.[ch] *.[yl] cvssync cvsconvert cvsreduce
-DOCS = README COPYING NEWS AUTHORS TODO control *.asc cfe-logo.png
+DOCS = README COPYING NEWS AUTHORS TODO control *.adoc cfe-logo.png
 ALL =  $(SOURCES) $(DOCS) tests
 cvs-fast-export-$(VERSION).tar.gz: $(ALL)
 	$(TAR) --transform='s:^:cvs-fast-export-$(VERSION)/:' --show-transformed-names -cvzf cvs-fast-export-$(VERSION).tar.gz $(ALL)
