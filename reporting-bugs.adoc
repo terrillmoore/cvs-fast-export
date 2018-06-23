@@ -69,7 +69,7 @@ merely brutally hard but verging on impossible.
 
 === Compensation ===
 
-Wrestling with CVS repository malformations is ugly, hard work.
+Wrestling with CVS repository malformations is ugly, difficult work.
 
 If you are requesting help on behalf of an open-source software
 project, you will get help for free as the maintainer's schedule
