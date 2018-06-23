@@ -1,5 +1,9 @@
 		cvs-fast-export project news
 
+Repository head:
+   Fix slightly incorrect generation of default .gitignore file.
+   Make cvsreduce work under Python 3.
+
 1.43: 2017-03-20
    Revert <2014-11-19T18:11:22Z@flower.powernet.co.uk>, optimization was wrong.
 
