@@ -157,7 +157,7 @@ def skeletonize(inputf, outputf):
         if state == 'ini':
             if line.startswith(b"symbols"):
                 state = "sym"
-            elif line[0].isdigit():
+            elif polystr(line[0]).isdigit():
                 last_version = line.strip()
             elif line.startswith("log"):
                 if strip_logs:
@@ -174,9 +174,9 @@ def skeletonize(inputf, outputf):
                     replace_escaped_text(inputf, txt, outputf)
                     continue
         elif state == "sym":
-            if not line[0] in (' ', '\t'):
+            if not polystr(line[0]) in (' ', '\t'):
                 state = "ini"
-            elif strip_tags and '0' not in line.split(":")[1]:
+            elif strip_tags and '0' not in polystr(line).split(":")[1]:
                 if line.endswith(b";\n"):
                     outputf.write("\t;\n")
                 continue
