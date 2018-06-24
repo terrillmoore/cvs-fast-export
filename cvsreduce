@@ -176,7 +176,7 @@ def skeletonize(inputf, outputf):
         elif state == "sym":
             if not line[0] in (' ', '\t'):
                 state = "ini"
-            elif strip_tags and '0' not in polystr(line).split(":")[1]:
+            elif strip_tags and '0' not in line.split(":")[1]:
                 if line.endswith(";\n"):
                     outputf.write("\t;\n")
                 continue
