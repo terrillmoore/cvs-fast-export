@@ -29,7 +29,7 @@ check: test
 ,v.dot:
 	$(CVS_FAST_EXPORT) -g $< >$*.dot
 
-test: s_regress m_regress r_regress i_regress f_regress t_regress c_regress z_regress
+test: s_regress m_regress r_regress i_regress f_regress t_regress c_regress z2_regress z3_regress
 	@echo "No diff output is good news."
 
 rebuild: s_rebuild m_rebuild r_rebuild i_rebuild t_rebuild z_rebuild
@@ -158,6 +158,16 @@ z_rebuild:
 		echo "Remaking $${base}.reduced "; \
 		cvsreduce <$${rtest} >reductions/$${base}.reduced; \
 	done
+
+z2_regress:
+	setpython python2
+	make z_regress
+	setpython python
+
+z3_regress:
+	setpython python3
+	make z_regress
+	setpython python
 
 clean:
 	rm -fr neutralize.map *.checkout *.repo *.pyc *.dot *.git *.git.fi

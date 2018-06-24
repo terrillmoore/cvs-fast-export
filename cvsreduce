@@ -149,22 +149,22 @@ def skeletonize(inputf, outputf):
     last_version = None
     deltacount = 0
     while True:
-        line = inputf.readline()
+        line = polystr(inputf.readline())
         if not line:
             break
         if verbose > 1:
             sys.stderr.write("%s: %s\n" % (state, line.strip()))
         if state == 'ini':
-            if line.startswith(b"symbols"):
+            if line.startswith("symbols"):
                 state = "sym"
-            elif polystr(line[0]).isdigit():
+            elif line[0].isdigit():
                 last_version = line.strip()
             elif line.startswith("log"):
                 if strip_logs:
                     outputf.write(line)
                     hash_escaped_text(inputf, outputf)
                     continue
-            elif line.startswith(b"text"):
+            elif line.startswith("text"):
                 if strip_content:
                     outputf.write(line)
                     txt = "%s content for %s\n" % (inputf.name, last_version)
@@ -174,10 +174,10 @@ def skeletonize(inputf, outputf):
                     replace_escaped_text(inputf, txt, outputf)
                     continue
         elif state == "sym":
-            if not polystr(line[0]) in (' ', '\t'):
+            if not line[0] in (' ', '\t'):
                 state = "ini"
             elif strip_tags and '0' not in polystr(line).split(":")[1]:
-                if line.endswith(b";\n"):
+                if line.endswith(";\n"):
                     outputf.write("\t;\n")
                 continue
         outputf.write(line)
