@@ -34,6 +34,10 @@
 #
 #       Like imported-twice.txt, but with a vendor branch whose branch
 #       tag has been removed.
+#
+# Note: Without the -F option this test has intermittent failures when
+# running multithreaded.  This is due to commits with identical timestamps
+# being canonicalized backwards from their topo order.
 
 import os, sys, testlifter
 

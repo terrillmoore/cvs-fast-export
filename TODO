@@ -54,3 +54,14 @@ I think they need to treated as separate branch heads.
 
 This didn't work with the old or new vendor branch code.
 
+* When running multithreaded, the test
+
+find  tests/t9601.testrepo -name '*,v' | sort | cvs-fast-export >/dev/null
+
+intermittently fails with error "cvs-fast-export fatal: child commit
+emitted before parent exists". This is known to be related to timestamp
+order not being well defined (many of the timestamps in the repo masters
+are identical) and commits being sorted into an order inconsistent with
+their parent-child partial ordering by the canonicalization code. It
+can be prevented with -F.  A root-cause fix would be to improve the
+export.c:canonicalize() function to do a toposort assisted by date.
