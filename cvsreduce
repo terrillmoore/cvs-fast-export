@@ -174,7 +174,7 @@ def skeletonize(inputf, outputf):
                     replace_escaped_text(inputf, txt, outputf)
                     continue
         elif state == "sym":
-            if not line[0] in (' ', '\t'):
+            if not line[0] in (' ', '\t') or line.strip() == ';':
                 state = "ini"
             elif strip_tags and '0' not in line.split(":")[1]:
                 if line.endswith(";\n"):
