@@ -679,7 +679,7 @@ Vendor-branch handling - revcvs.c:cvs_master_patch_vendor_branch() -
 is subject to problems in various ill-defined edge cases.
 
 Various mysterious error messages need to be documented.  Basically,
-if it's not in the list on cvs-fast-export.asc, it needs to be.
+if it's not in the list on cvs-fast-export.adoc, it needs to be.
 
 == Good practice ==
 

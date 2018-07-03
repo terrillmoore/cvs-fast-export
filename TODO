@@ -1,6 +1,6 @@
 			TO DO
 
-Before you try to modify this code, read hacking.asc.
+Before you try to modify this code, read hacking.adoc.
 
 * Progress reporting within files for large files with many commits?
 

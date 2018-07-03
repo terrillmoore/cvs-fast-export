@@ -31,7 +31,7 @@ trees of RCS/CVS masters, leaving only metadata structure in place. If
 you encounter a bug in this program, sending the maintainer a reduced
 version of your CVS tree greatly decreases the expected time to fix.
 
-A more detailed guide to effective bug reporting is at reporting-bugs.asc.
+A more detailed guide to effective bug reporting is at reporting-bugs.adoc.
 
 This code has a regression-test suite; invoke it with "make check".
 You will need RCS and CVS installed to run the tests, but they're
@@ -48,4 +48,4 @@ MirOS patches.  These are carried by Debian Linux and derivatives; you can
 check by Looking for "MirDebian" in the output of cvs --version.
 
 See also the NEWS and TODO files.  There is an (incomplete) tour of
-the internals in hacking.asc.
+the internals in hacking.adoc.
