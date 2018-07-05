@@ -97,7 +97,7 @@ else:  # Python 3
 
 def replace_escaped_text(inputf, replacement, outputf):
     "Replace text between @ delimiters with a specified string."
-    leader = inputf.read(1)
+    leader = polystr(inputf.read(1))
     if leader != '@':
         sys.stderr.write("cvsreduce: fatal error, @ leader not where expected.\n")
         sys.exit(1)
@@ -119,13 +119,13 @@ def replace_escaped_text(inputf, replacement, outputf):
 
 def hash_escaped_text(inputf, outputf):
     "Replace text between @ delimiters with its MD5 hash."
-    leader = inputf.read(1)
+    leader = polystr(inputf.read(1))
     if leader != '@':
         sys.stderr.write("cvsreduce: fatal error, @ leader not where expected.\n")
         sys.exit(1)
     txt = ""
     while True:
-        nxt = inputf.read(1)
+        nxt = polystr(inputf.read(1))
         if nxt == '@':
             nxt2 = inputf.read(1)
             if nxt2 == '@':
@@ -136,24 +136,25 @@ def hash_escaped_text(inputf, outputf):
         txt += nxt
     if nxt2 == '\n':
         m = hashlib.md5()
-        m.update(txt.encode(binary_encoding))
+        m.update(polybytes(txt))
         outputf.write("@%s\n@\n" % m.hexdigest())
     else:
         sys.stderr.write("cvsreduce: fatal error, @ trailer not followed by newline (%s).\n" % nxt2)
         sys.exit(1)
-
 
 def skeletonize(inputf, outputf):
     "Skeletonize a CVS master, discarding content but leaving metadata."
     state = "ini"
     last_version = None
     deltacount = 0
+    lineno = 0
     while True:
+        lineno += 1
         line = polystr(inputf.readline())
         if not line:
             break
         if verbose > 1:
-            sys.stderr.write("%s: %s\n" % (state, line.strip()))
+            sys.stderr.write(b"%s: %s\n" % (state, line.strip()))
         if state == 'ini':
             if line.startswith("symbols"):
                 state = "sym"
@@ -161,12 +162,12 @@ def skeletonize(inputf, outputf):
                 last_version = line.strip()
             elif line.startswith("log"):
                 if strip_logs:
-                    outputf.write(line)
+                    outputf.write(polystr(line))
                     hash_escaped_text(inputf, outputf)
                     continue
             elif line.startswith("text"):
                 if strip_content:
-                    outputf.write(line)
+                    outputf.write(polystr(line))
                     txt = "%s content for %s\n" % (inputf.name, last_version)
                     if deltacount > 0:
                         txt = "d1 1\na1 1\n" + txt
@@ -180,7 +181,7 @@ def skeletonize(inputf, outputf):
                 if line.endswith(";\n"):
                     outputf.write("\t;\n")
                 continue
-        outputf.write(line)
+        outputf.write(polystr(line))
 
 if __name__ == '__main__':
     (opts, arguments) = getopt.getopt(sys.argv[1:], "ctlo:v")
